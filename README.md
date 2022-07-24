@@ -7,7 +7,7 @@ with associated io chunk and io stream interfaces.
 - **open**: opens a rabbit aead ciphertext. **panic** occurs if nonce len is not equal to IVXLen (8byte) or zero
 
 <p align="center">
-   <img src="seal.png" alt="seal"/>
+   <img src="https://github.com/Sina-Ghaderi/rabaead/blob/master/seal.png" alt="seal"/>
 </p>
 
 
