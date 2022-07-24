@@ -110,7 +110,7 @@ func (c *rabbitPoly1305) openRabbit(dst, nonce, ciphertext, ad []byte) ([]byte, 
 }
 
 // Open opens a rabbit aead ciphertext.
-// panic occurs if nonce len is not equal to RabbitIVXLen (8byte) or zero
+// panic occurs if nonce len is not equal to IVXLen (8byte) or zero
 // if data is not verified, ErrAuthMsg will be returned
 func (c *rabbitPoly1305) Open(dst, nonce, ciphertext, ad []byte) ([]byte, error) {
 
@@ -122,7 +122,7 @@ func (c *rabbitPoly1305) Open(dst, nonce, ciphertext, ad []byte) ([]byte, error)
 }
 
 // Seal seals a plaintext into the rabbit aead ciphertext.
-// panic occurs if nonce len is not equal to RabbitIVXLen (8byte) or zero
+// panic occurs if nonce len is not equal to IVXLen (8byte) or zero
 func (c *rabbitPoly1305) Seal(dst, nonce, plaintext, ad []byte) []byte {
 	return c.sealRabbit(dst, nonce, plaintext, ad)
 }
