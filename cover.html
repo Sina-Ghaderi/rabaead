@@ -1,0 +1,782 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>rabaead: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">snix.ir/rabaead/chunk.go (83.5%)</option>
+				
+				<option value="file1">snix.ir/rabaead/cipher.go (83.3%)</option>
+				
+				<option value="file2">snix.ir/rabaead/genlap.go (100.0%)</option>
+				
+				<option value="file3">snix.ir/rabaead/helper.go (100.0%)</option>
+				
+				<option value="file4">snix.ir/rabaead/ioaead.go (89.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package rabaead
+
+import (
+        "bytes"
+        "crypto/cipher"
+        "encoding/binary"
+        "io"
+
+        "snix.ir/rabbitio"
+)
+
+const cmrk = 0x08 // chunk size indicator,
+// without this reader cannot calculate actual size of plaintext
+
+// additional data func, return value is used as AD in Seal and Open
+// nil AdFunc is harmless and equal to func()[]byte{return nil}
+type AdditionalFunc func() []byte
+
+type chunkReader struct {
+        aead  cipher.AEAD
+        csize int
+        rader io.Reader
+        buff  []byte
+        nonce []byte
+        adexe AdditionalFunc
+}
+
+type chunkWriter struct {
+        aead   cipher.AEAD
+        csize  int
+        writer io.Writer
+        buff   []byte
+        nonce  []byte
+        adexe  AdditionalFunc
+}
+
+// NewChunkReader returns a chunkReader data type, this reader reads and open() aead
+// ciphertext, each chunk has its own tag and cmrk value.
+// this reader has a chunk size in-memory buffer, large chunk size can make application to runs
+// out of memory, thus is most suitable for sliced data, like network data transmit and so..
+func NewChunkReader(r io.Reader, chnk int, a cipher.AEAD, nonce []byte, f AdditionalFunc) (*chunkReader, error) <span class="cov8" title="1">{
+
+        if len(nonce) != rabbitio.IVXLen &amp;&amp; len(nonce) != 0 </span><span class="cov0" title="0">{
+                return nil, rabbitio.ErrInvalidIVX
+        }</span>
+
+        <span class="cov8" title="1">s := &amp;chunkReader{
+                aead:  a,
+                buff:  []byte{},
+                nonce: make([]byte, len(nonce)),
+                csize: chnk,
+                rader: r,
+                adexe: f,
+        }
+
+        if s.adexe == nil </span><span class="cov8" title="1">{
+                s.adexe = func() []byte </span><span class="cov8" title="1">{ return nil }</span>
+        }
+        <span class="cov8" title="1">copy(s.nonce, nonce)
+        return s, nil</span>
+}
+
+// NewChunkWriter returns a chunkWriter data type, this writer sale() and write aead
+// plaintext, each chunk has its own tag and cmrk value.
+// this writer has a chunk size in-memory buffer, large chunk size can make application to
+// runs out of memory, thus is most suitable for sliced data, like network data transmit and so..
+func NewChunkWriter(w io.Writer, chnk int, a cipher.AEAD, nonce []byte, f AdditionalFunc) (*chunkWriter, error) <span class="cov8" title="1">{
+
+        if len(nonce) != rabbitio.IVXLen &amp;&amp; len(nonce) != 0 </span><span class="cov0" title="0">{
+                return nil, rabbitio.ErrInvalidIVX
+        }</span>
+        <span class="cov8" title="1">s := &amp;chunkWriter{
+                aead:   a,
+                buff:   []byte{},
+                nonce:  make([]byte, len(nonce)),
+                csize:  chnk,
+                writer: w,
+                adexe:  f,
+        }
+
+        if s.adexe == nil </span><span class="cov8" title="1">{
+                s.adexe = func() []byte </span><span class="cov8" title="1">{ return nil }</span>
+        }
+
+        <span class="cov8" title="1">copy(s.nonce, nonce)
+        return s, nil</span>
+}
+
+// Close method, if there is any
+func (w *chunkWriter) Close() error <span class="cov8" title="1">{
+        if c, ok := w.writer.(io.Closer); ok </span><span class="cov0" title="0">{
+                return c.Close()
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+// Write writes plaintext chunk into the sale() and underlying writer
+// write would not report overhead data (chunk size marker and poly1305 tag) in
+// written return value. for each chunk there is 8+16 byte overhead data.
+// AdFunc will be triggered for each chunk of data
+func (w *chunkWriter) Write(b []byte) (n int, err error) <span class="cov8" title="1">{
+        w.buff = b
+        for len(w.buff) &gt; 0 </span><span class="cov8" title="1">{
+                s, err := w.write()
+                if err != nil </span><span class="cov0" title="0">{
+                        return n, err
+                }</span>
+                <span class="cov8" title="1">n += s</span>
+        }
+        <span class="cov8" title="1">return</span>
+}
+
+func (w *chunkWriter) write() (int, error) <span class="cov8" title="1">{
+        size := cmrk + w.csize + w.aead.Overhead()
+        chnk := make([]byte, size)
+        var n int
+        var err error
+
+        if len(w.buff) &gt; 0 </span><span class="cov8" title="1">{
+                s := copy(chnk[cmrk:len(chnk)-w.aead.Overhead()], w.buff)
+                w.buff = w.buff[s:]
+                copy(chnk[0:cmrk], uint64Little(uint64(s)))
+
+                w.aead.Seal(chnk[:0], w.nonce, chnk[:cmrk+w.csize], w.adexe())
+                _, err = w.writer.Write(chnk)
+                if err != nil </span><span class="cov0" title="0">{
+                        return n, err
+                }</span>
+                <span class="cov8" title="1">n += s</span>
+        }
+
+        <span class="cov8" title="1">return n, err</span>
+}
+
+// Read reads and open() ciphertext chunk from underlying reader
+// read would not report overhead data (chunk size marker and poly1305 tag) in its
+// return value. if the read data from underlying reader is corrupted, ErrAuthMsg
+// error will be returned. for each chunk there is 8+16 byte overhead data.
+// AdFunc will be triggered for each chunk of data
+
+func (r *chunkReader) Read(b []byte) (int, error) <span class="cov8" title="1">{
+        if len(b) &lt;= r.csize </span><span class="cov0" title="0">{
+                return r.readTo(b)
+        }</span>
+        <span class="cov8" title="1">n := 0
+        for </span><span class="cov8" title="1">{
+                if n+r.csize &gt; len(b) </span><span class="cov8" title="1">{
+                        sr, err := r.readTo(b[n:])
+                        n += sr
+                        if err != nil </span><span class="cov8" title="1">{
+                                return n, err
+                        }</span>
+                        <span class="cov0" title="0">break</span>
+                }
+                <span class="cov8" title="1">sr, err := r.readTo(b[n : n+r.csize])
+                n += sr
+                if err != nil </span><span class="cov8" title="1">{
+                        return n, err
+                }</span>
+        }
+
+        <span class="cov0" title="0">return n, nil</span>
+}
+
+func (r *chunkReader) readTo(b []byte) (int, error) <span class="cov8" title="1">{
+        var n int
+        if len(r.buff) &gt; 0 </span><span class="cov0" title="0">{
+                n = copy(b, r.buff)
+                r.buff = r.buff[n:]
+                return n, nil
+        }</span>
+
+        <span class="cov8" title="1">sr, err := r.read()
+        n = copy(b, r.buff[:sr])
+        r.buff = r.buff[n:]
+        return n, err</span>
+}
+
+func (r *chunkReader) read() (int, error) <span class="cov8" title="1">{
+
+        var n int
+        size := cmrk + r.csize + r.aead.Overhead()
+        chnk := make([]byte, size)
+        chLE := uint64Little(uint64(r.csize))
+
+        si, err := io.ReadFull(r.rader, chnk)
+        if err != nil </span><span class="cov8" title="1">{
+                return n, err
+        }</span>
+
+        <span class="cov8" title="1">if si &gt; 0 </span><span class="cov8" title="1">{
+                _, err = r.aead.Open(chnk[:0], r.nonce, chnk, r.adexe())
+                if err != nil </span><span class="cov8" title="1">{
+                        return n, err
+                }</span>
+
+                <span class="cov8" title="1">if bytes.Equal(chnk[0:cmrk], chLE) </span><span class="cov8" title="1">{
+                        n += r.csize
+                        r.buff = append(r.buff, chnk[cmrk:cmrk+r.csize]...)
+                }</span> else<span class="cov0" title="0"> {
+                        f := binary.LittleEndian.Uint64(chnk[0:cmrk])
+                        n += int(f)
+                        r.buff = append(r.buff, chnk[cmrk:cmrk+f]...)
+                }</span>
+        }
+
+        <span class="cov8" title="1">return n, err</span>
+}
+
+func uint64Little(n uint64) []byte <span class="cov8" title="1">{
+        b := make([]byte, cmrk)
+        binary.LittleEndian.PutUint64(b, n)
+        return b
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package rabaead
+
+import (
+        "crypto/cipher"
+        "errors"
+
+        "snix.ir/poly1305"
+        "snix.ir/rabbitio"
+)
+
+const polykeylen = 0x20 // poly1305 key len: 32byte
+
+var ErrAuthMsg = errors.New("rabaead: message authentication failed")
+var erroverlap = errors.New("rabaead: invalid buffer memory overlap")
+
+type rabbitPoly1305 struct {
+        key       []byte // rabbit cipher key
+        noncesize int    // rabbit iv size
+}
+
+// NewAEAD returns a rabbit aead data-type
+// key must be 16 byte len
+func NewAEAD(key []byte) (cipher.AEAD, error) <span class="cov8" title="1">{ return newRabbitAead(key) }</span>
+
+func newRabbitAead(key []byte) (cipher.AEAD, error) <span class="cov8" title="1">{
+        if len(key) != rabbitio.KeyLen </span><span class="cov0" title="0">{
+                return nil, rabbitio.ErrInvalidKey
+        }</span>
+
+        <span class="cov8" title="1">rabbitAead := &amp;rabbitPoly1305{
+                noncesize: rabbitio.IVXLen,
+                key:       make([]byte, rabbitio.KeyLen),
+        }
+        copy(rabbitAead.key[:], key)
+        return rabbitAead, nil</span>
+
+}
+
+// Overhead returns poly1305 tag size: 16byte
+func (c *rabbitPoly1305) Overhead() int <span class="cov8" title="1">{ return poly1305.TagSize }</span>
+
+// NonceSize returns rabbit iv len: 8byte
+func (c *rabbitPoly1305) NonceSize() int <span class="cov0" title="0">{ return c.noncesize }</span>
+
+func (c *rabbitPoly1305) sealRabbit(dst, nonce, plaintext, ad []byte) []byte <span class="cov8" title="1">{
+        ret, out := headtail(dst, len(plaintext)+poly1305.TagSize)
+        ciphertext, tag := out[:len(plaintext)], out[len(plaintext):]
+        if inexactOverlap(out, plaintext) </span><span class="cov0" title="0">{
+                panic(erroverlap)</span> //should never happen
+        }
+
+        <span class="cov8" title="1">var polyKey [polykeylen]byte
+        s, err := rabbitio.NewCipher(c.key, nonce)
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">s.XORKeyStream(polyKey[:], polyKey[:])
+        p := poly1305.New(&amp;polyKey)
+        writePadding(p, ad)
+
+        s, err = rabbitio.NewCipher(c.key, nonce)
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">s.XORKeyStream(ciphertext, plaintext)
+
+        writePadding(p, ciphertext)
+
+        writeUint64(p, len(ad))
+        writeUint64(p, len(plaintext))
+        p.Sum(tag[:0x00])
+
+        return ret</span>
+}
+
+func (c *rabbitPoly1305) openRabbit(dst, nonce, ciphertext, ad []byte) ([]byte, error) <span class="cov8" title="1">{
+        tag := ciphertext[len(ciphertext)-poly1305.TagSize:]
+        ciphertext = ciphertext[:len(ciphertext)-poly1305.TagSize]
+
+        var polyKey [polykeylen]byte
+        s, err := rabbitio.NewCipher(c.key, nonce)
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">s.XORKeyStream(polyKey[:], polyKey[:])
+
+        p := poly1305.New(&amp;polyKey)
+        writePadding(p, ad)
+        writePadding(p, ciphertext)
+
+        writeUint64(p, len(ad))
+        writeUint64(p, len(ciphertext))
+
+        ret, out := headtail(dst, len(ciphertext))
+        if inexactOverlap(out, ciphertext) </span><span class="cov0" title="0">{
+                panic(erroverlap)</span> //should never happen
+        }
+
+        // check data integrity
+        <span class="cov8" title="1">if !p.Verify(tag) </span><span class="cov8" title="1">{
+                return nil, ErrAuthMsg
+        }</span>
+
+        <span class="cov8" title="1">s, err = rabbitio.NewCipher(c.key, nonce)
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">s.XORKeyStream(out, ciphertext)
+        return ret, nil</span>
+}
+
+// Open opens a rabbit aead ciphertext.
+// panic occurs if nonce len is not equal to RabbitIVXLen (8byte) or zero
+// if data is not verified, ErrAuthMsg will be returned
+func (c *rabbitPoly1305) Open(dst, nonce, ciphertext, ad []byte) ([]byte, error) <span class="cov8" title="1">{
+
+        if len(ciphertext) &lt; poly1305.TagSize </span><span class="cov0" title="0">{
+                return nil, ErrAuthMsg
+        }</span>
+
+        <span class="cov8" title="1">return c.openRabbit(dst, nonce, ciphertext, ad)</span>
+}
+
+// Seal seals a plaintext into the rabbit aead ciphertext.
+// panic occurs if nonce len is not equal to RabbitIVXLen (8byte) or zero
+func (c *rabbitPoly1305) Seal(dst, nonce, plaintext, ad []byte) []byte <span class="cov8" title="1">{
+        return c.sealRabbit(dst, nonce, plaintext, ad)
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">//go:build !appengine
+
+package rabaead
+
+import "unsafe"
+
+func anyOverlap(x, y []byte) bool <span class="cov8" title="1">{
+        return len(x) &gt; 0 &amp;&amp; len(y) &gt; 0 &amp;&amp;
+                uintptr(unsafe.Pointer(&amp;x[0])) &lt;= uintptr(unsafe.Pointer(&amp;y[len(y)-1])) &amp;&amp;
+                uintptr(unsafe.Pointer(&amp;y[0])) &lt;= uintptr(unsafe.Pointer(&amp;x[len(x)-1]))
+}</span>
+
+func inexactOverlap(x, y []byte) bool <span class="cov8" title="1">{
+        if len(x) == 0 || len(y) == 0 || &amp;x[0] == &amp;y[0] </span><span class="cov8" title="1">{
+                return false
+        }</span>
+        <span class="cov8" title="1">return anyOverlap(x, y)</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package rabaead
+
+import (
+        "encoding/binary"
+
+        "snix.ir/poly1305"
+)
+
+func headtail(in []byte, n int) (head, tail []byte) <span class="cov8" title="1">{
+        total := len(in) + n
+
+        if cap(in) &gt;= total </span><span class="cov8" title="1">{
+                head = in[:total]
+        }</span> else<span class="cov8" title="1"> {
+                head = make([]byte, total)
+                copy(head, in)
+        }</span>
+        <span class="cov8" title="1">tail = head[len(in):]
+        return</span>
+}
+
+func writePadding(p *poly1305.MAC, b []byte) <span class="cov8" title="1">{
+        p.Write(b)
+        if rem := len(b) % 16; rem != 0 </span><span class="cov8" title="1">{
+                var buf [16]byte
+                padLen := 16 - rem
+                p.Write(buf[:padLen])
+        }</span>
+}
+
+func writeUint64(p *poly1305.MAC, n int) <span class="cov8" title="1">{
+        var buf [8]byte
+        binary.LittleEndian.PutUint64(buf[:], uint64(n))
+        p.Write(buf[:])
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package rabaead
+
+import (
+        "crypto/cipher"
+        "errors"
+        "io"
+
+        "snix.ir/poly1305"
+        "snix.ir/rabbitio"
+)
+
+type streamReader struct {
+        ie        *ioaead
+        cip       cipher.Stream
+        firstRead bool
+        nwr       int
+        read      io.Reader
+        buff      []byte
+        temp      []byte
+        tagc      []byte
+}
+
+type ioaead struct {
+        key            []byte // rabbit cipher key
+        nonce          []byte
+        poly           *poly1305.MAC
+        adlen          int
+        additionalData AdditionalFunc
+}
+
+type streamWriter struct {
+        ie          *ioaead
+        writer      io.Writer
+        plainWriter io.Writer
+        nwr         int
+        firstWrite  bool
+}
+
+var errunderio = errors.New("underlying io reader returns wrong read value, which is not supposed to happen")
+
+func makeioaead(key, iv []byte, adfunc AdditionalFunc) *ioaead <span class="cov8" title="1">{
+        if adfunc == nil </span><span class="cov8" title="1">{
+                adfunc = func() []byte </span><span class="cov8" title="1">{ return nil }</span>
+        }
+        <span class="cov8" title="1">str := &amp;ioaead{
+                key:   make([]byte, rabbitio.KeyLen),
+                nonce: make([]byte, len(iv)),
+        }
+
+        str.additionalData = adfunc
+        copy(str.key, key)
+        copy(str.nonce, iv)
+        var poly [polykeylen]byte
+        cph, _ := rabbitio.NewCipher(str.key, str.nonce)
+        cph.XORKeyStream(poly[:], poly[:])
+        str.poly = poly1305.New(&amp;poly)
+        return str</span>
+}
+
+func (s *ioaead) execAdFunc() <span class="cov8" title="1">{
+        additionalData := s.additionalData()
+        s.adlen = len(additionalData)
+        writePadding(s.poly, additionalData)
+}</span>
+
+func newCipherReader(r io.Reader, key, nonce []byte, f AdditionalFunc) (*streamReader, error) <span class="cov8" title="1">{
+        if len(key) != rabbitio.KeyLen </span><span class="cov0" title="0">{
+                return nil, rabbitio.ErrInvalidKey
+        }</span>
+
+        <span class="cov8" title="1">if len(nonce) != rabbitio.IVXLen &amp;&amp; len(nonce) != 0 </span><span class="cov0" title="0">{
+                return nil, rabbitio.ErrInvalidIVX
+        }</span>
+
+        <span class="cov8" title="1">v := &amp;streamReader{
+                ie:   makeioaead(key, nonce, f),
+                read: r,
+                buff: []byte{},
+                tagc: make([]byte, 16),
+                temp: make([]byte, 16),
+        }
+
+        v.cip, _ = rabbitio.NewCipher(v.ie.key, v.ie.nonce)
+        return v, nil</span>
+}
+
+// NewStreamReader returns streamReader data type, this reader open() and read aead
+// ciphertext which have 16-byte poly1305 tag overhead.
+// read data cannot be authenticated until underlying reader returns EOF
+// so you should use this reader only if you can undo your read.
+// AdFunc will be triggered at first call to read method
+func NewStreamReader(r io.Reader, key, nonce []byte, f AdditionalFunc) (*streamReader, error) <span class="cov8" title="1">{
+        return newCipherReader(r, key, nonce, f)
+}</span>
+
+// NewStreamWriter returns streamWriter data type, this writer sale() and write aead
+// plaintext which have 16-byte poly1305 tag overhead, running Close() is necessary
+// in order to calculate and write tag at the end of the write.
+// AdFunc will be triggered at first call to write method
+func NewStreamWriter(w io.Writer, key, nonce []byte, f AdditionalFunc) (*streamWriter, error) <span class="cov8" title="1">{
+        return newChipherWriter(w, key, nonce, f)
+}</span>
+
+func newChipherWriter(w io.Writer, key, nonce []byte, f AdditionalFunc) (*streamWriter, error) <span class="cov8" title="1">{
+        if len(key) != rabbitio.KeyLen </span><span class="cov0" title="0">{
+                return nil, rabbitio.ErrInvalidKey
+        }</span>
+        <span class="cov8" title="1">if len(nonce) != rabbitio.IVXLen &amp;&amp; len(nonce) != 0 </span><span class="cov0" title="0">{
+                return nil, rabbitio.ErrInvalidIVX
+        }</span>
+        <span class="cov8" title="1">v := &amp;streamWriter{
+                ie:          makeioaead(key, nonce, f),
+                plainWriter: w,
+        }
+
+        v.writer, _ = rabbitio.NewWriterCipher(
+                v.ie.key, v.ie.nonce,
+                io.MultiWriter(w, v.ie.poly),
+        )
+
+        return v, nil</span>
+}
+
+func (r *streamReader) readTo(b []byte) (int, error) <span class="cov8" title="1">{
+        var n int
+        if len(r.buff) &gt; 0 </span><span class="cov8" title="1">{
+                return r.copyBuff(b), nil
+        }</span>
+
+        <span class="cov8" title="1">sr, err := r.readBuff()
+        if err != nil </span><span class="cov8" title="1">{
+                if err == io.EOF </span><span class="cov8" title="1">{
+                        n = r.copyUntil(b, sr)
+                        return n, r.verify()
+                }</span>
+                <span class="cov0" title="0">return n, err</span>
+        }
+        <span class="cov8" title="1">return r.copyUntil(b, sr), err</span>
+}
+
+// Read reads and open ciphertext.
+// read data is unreliable until underlying reader returns EOF
+// after that Read return EOF or ErrAuthMsg if integrity of data has been compromised.
+// in such a case, you need to unread data. a simple demonstration would be to delete
+// or truncate the file if ErrAuthMsg is returned
+func (r *streamReader) Read(b []byte) (int, error) <span class="cov8" title="1">{
+        if len(b) &lt;= 16 </span><span class="cov8" title="1">{
+                return r.readTo(b)
+        }</span>
+        <span class="cov8" title="1">n := 0
+        for </span><span class="cov8" title="1">{
+                if n+16 &gt; len(b) </span><span class="cov8" title="1">{
+                        sr, err := r.readTo(b[n:])
+                        n += sr
+                        if err != nil </span><span class="cov8" title="1">{
+                                return n, err
+                        }</span>
+                        <span class="cov0" title="0">break</span>
+                }
+
+                <span class="cov8" title="1">sr, err := r.readTo(b[n : n+16])
+                n += sr
+                if err != nil </span><span class="cov8" title="1">{
+                        return n, err
+                }</span>
+        }
+        <span class="cov0" title="0">return n, nil</span>
+}
+
+func (r *streamReader) verify() error <span class="cov8" title="1">{
+        r.ie.ioPaddingTo(r.nwr)
+        if r.ie.poly.Verify(r.tagc) </span><span class="cov8" title="1">{
+                return io.EOF
+        }</span>
+        <span class="cov8" title="1">return ErrAuthMsg</span>
+}
+
+func (r *streamReader) copyUntil(b []byte, sr int) int <span class="cov8" title="1">{
+        n := copy(b, r.buff[:sr])
+        r.buff = r.buff[n:]
+        r.nwr += n
+        return n
+}</span>
+
+func (r *streamReader) copyBuff(b []byte) int <span class="cov8" title="1">{
+        n := copy(b, r.buff)
+        r.buff = r.buff[n:]
+        r.nwr += n
+        return n
+}</span>
+
+func (r *streamReader) readBuff() (int, error) <span class="cov8" title="1">{
+        if !r.firstRead </span><span class="cov8" title="1">{
+                r.ie.execAdFunc()
+                _, err := io.ReadFull(r.read, r.temp)
+                if err != nil </span><span class="cov0" title="0">{
+                        return 0, err
+                }</span>
+                <span class="cov8" title="1">r.firstRead = true</span>
+        }
+
+        <span class="cov8" title="1">var buff = make([]byte, 16)
+        n, err := r.read.Read(buff)
+        if err != nil </span><span class="cov8" title="1">{
+                return 0, err
+        }</span>
+        <span class="cov8" title="1">if n &gt; len(buff) </span><span class="cov0" title="0">{
+                return 0, errunderio
+        }</span>
+
+        <span class="cov8" title="1">copy(r.tagc, append(r.temp[n:], buff[:n]...))
+        r.buff = append(r.buff, r.temp[:n]...)
+        r.buffAndXor()
+
+        if n &lt; 16 </span><span class="cov8" title="1">{
+                return n, err
+        }</span>
+
+        <span class="cov8" title="1">copy(r.temp, buff)
+        return n, err</span>
+}
+
+func (r *streamReader) buffAndXor() <span class="cov8" title="1">{
+        r.ie.poly.Write(r.buff)
+        r.cip.XORKeyStream(r.buff, r.buff)
+}</span>
+
+// Write writes plaintext data, in order to calculate and write tag
+// at the end of the write, running Close() is necessary
+func (w *streamWriter) Write(b []byte) (int, error) <span class="cov8" title="1">{
+        if !w.firstWrite </span><span class="cov8" title="1">{
+                w.ie.execAdFunc()
+                w.firstWrite = true
+        }</span>
+        <span class="cov8" title="1">n, err := w.writer.Write(b)
+        if err != nil </span><span class="cov0" title="0">{
+                return n, err
+        }</span>
+
+        <span class="cov8" title="1">w.nwr += n
+        return n, err</span>
+}
+
+func (p *ioaead) ioPaddingTo(nb int) <span class="cov8" title="1">{
+        if rem := nb % 16; rem != 0 </span><span class="cov8" title="1">{
+                var buf [16]byte
+                padLen := 16 - rem
+                p.poly.Write(buf[:padLen])
+        }</span>
+
+        <span class="cov8" title="1">writeUint64(p.poly, p.adlen)
+        writeUint64(p.poly, nb)</span>
+}
+
+// Close calculate and write poly1305 tag before closing the writer
+// if underlying writer does not have a Close() method, Close only
+// calculate and write poly1305 tag
+func (w *streamWriter) Close() error <span class="cov8" title="1">{
+        w.ie.ioPaddingTo(w.nwr)
+        if _, err := w.plainWriter.Write(w.ie.poly.Sum(nil)); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">if c, ok := w.plainWriter.(io.Closer); ok </span><span class="cov0" title="0">{
+                return c.Close()
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
