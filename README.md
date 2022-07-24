@@ -27,7 +27,7 @@ with associated io chunk and io stream interfaces.
 
 
 ### how to use?
-rabaead lives on both [github](github.com/sina-ghaderi/rabaead) and [snix](git.snix.ir/rabaead) git services, you can simply import this package 
+rabaead lives on both [github](github.com/sina-ghaderi/rabaead) and [snix](https://git.snix.ir/rabaead) git services, you can simply import this package 
 by using either `import "snix.ir/rabaead"` or `import "github.com/sina-ghaderi/rabaead"`
 
 
