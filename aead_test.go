@@ -388,3 +388,27 @@ func TestStreamIOErr(t *testing.T) {
 		t.Fatal("err auth must returned")
 	}
 }
+
+
+func TestShortData(t *testing.T) {
+	buf := &bytes.Buffer{}
+	buf.Write(ptx[:15])
+	r, err := rabaead.NewStreamReader(buf, key, iv, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pbf := make([]byte, 16)
+	for {
+		_, err = r.Read(pbf)
+		if err != nil {
+			break
+		}
+	}
+
+	if err != io.ErrUnexpectedEOF {
+		t.Fatal("err io.ErrUnexpectedEOF must returned")
+	}
+
+}
+
