@@ -32,9 +32,8 @@ by using either `import "snix.ir/rabaead"` or `import "github.com/sina-ghaderi/r
 
 
 ### examples
+check out [_example](_example) directory which contains real-world use cases of rabaead cipher, in addition you may want to look at test unit files or
 package [documentation](https://pkg.go.dev/github.com/sina-ghaderi/rabaead) at pkg.go.dev  
-check out [_example](_example) directory which contains real-world use cases of rabaead cipher, in addition you may want to look at test unit files.  
-
 ```go
 // aead open() and seal() methods
 func rabbitPoly1305() {
