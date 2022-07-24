@@ -63,7 +63,7 @@
 				
 				<option value="file3">snix.ir/rabaead/helper.go (100.0%)</option>
 				
-				<option value="file4">snix.ir/rabaead/ioaead.go (89.0%)</option>
+				<option value="file4">snix.ir/rabaead/ioaead.go (90.8%)</option>
 				
 				</select>
 			</div>
@@ -405,7 +405,7 @@ func (c *rabbitPoly1305) openRabbit(dst, nonce, ciphertext, ad []byte) ([]byte, 
 }
 
 // Open opens a rabbit aead ciphertext.
-// panic occurs if nonce len is not equal to RabbitIVXLen (8byte) or zero
+// panic occurs if nonce len is not equal to IVXLen (8byte) or zero
 // if data is not verified, ErrAuthMsg will be returned
 func (c *rabbitPoly1305) Open(dst, nonce, ciphertext, ad []byte) ([]byte, error) <span class="cov8" title="1">{
 
@@ -417,7 +417,7 @@ func (c *rabbitPoly1305) Open(dst, nonce, ciphertext, ad []byte) ([]byte, error)
 }
 
 // Seal seals a plaintext into the rabbit aead ciphertext.
-// panic occurs if nonce len is not equal to RabbitIVXLen (8byte) or zero
+// panic occurs if nonce len is not equal to IVXLen (8byte) or zero
 func (c *rabbitPoly1305) Seal(dst, nonce, plaintext, ad []byte) []byte <span class="cov8" title="1">{
         return c.sealRabbit(dst, nonce, plaintext, ad)
 }</span>
@@ -615,7 +615,7 @@ func (r *streamReader) readTo(b []byte) (int, error) <span class="cov8" title="1
                         n = r.copyUntil(b, sr)
                         return n, r.verify()
                 }</span>
-                <span class="cov0" title="0">return n, err</span>
+                <span class="cov8" title="1">return n, err</span>
         }
         <span class="cov8" title="1">return r.copyUntil(b, sr), err</span>
 }
@@ -675,7 +675,7 @@ func (r *streamReader) readBuff() (int, error) <span class="cov8" title="1">{
         if !r.firstRead </span><span class="cov8" title="1">{
                 r.ie.execAdFunc()
                 _, err := io.ReadFull(r.read, r.temp)
-                if err != nil </span><span class="cov0" title="0">{
+                if err != nil </span><span class="cov8" title="1">{
                         return 0, err
                 }</span>
                 <span class="cov8" title="1">r.firstRead = true</span>
