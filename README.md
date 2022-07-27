@@ -7,7 +7,7 @@ with associated io chunk and io stream interfaces.
 - **open**: opens a rabbit aead ciphertext. **panic** occurs if nonce len is not equal to IVXLen (8byte) or zero
 
 <p align="center">
-   <img src="https://git.snix.ir/rabaead/plain/seal.png" alt="seal"/>
+   <img src="https://github.com/Sina-Ghaderi/rabaead/blob/master/seal.png" alt="seal"/>
 </p>
 
 
@@ -17,7 +17,7 @@ with associated io chunk and io stream interfaces.
 
 - **chunkReader**: seal() and write data in chunks, there is 4byte + 16byte overhead per chunk. this writer has a chunk size in-memory buffer, large chunk size can make application to runs out of memory, thus this is most suitable for sliced data, like network data transmit and so..
 <p align="center">
-   <img src="https://git.snix.ir/rabaead/plain/chunkio.png" alt="chunkio"/>
+   <img src="https://github.com/Sina-Ghaderi/rabaead/blob/master/chunkio.png" alt="chunkio"/>
 </p>
 
 - **streamReader**: this reader open() and read aead ciphertext which have 16-byte poly1305 tag overhead. **read data is unreliable until underlying reader returns EOF**, after that Read return EOF or ErrAuthMsg if integrity of data has been compromised. in such a case, you need to unread data. a simple demonstration would be to delete or truncate the file if ErrAuthMsg is returned
@@ -32,7 +32,7 @@ by using either `import "snix.ir/rabaead"` or `import "github.com/sina-ghaderi/r
 
 
 ### examples
-check out [_example](_example) directory which contains real-world use cases of rabaead cipher, in addition you may want to look at test unit files or package [documentation](https://pkg.go.dev/snix.ir/rabaead) at pkg.go.dev    
+check out [_example](_example) directory which contains real-world use cases of rabaead cipher, in addition you may want to look at test unit files or package [documentation](https://pkg.go.dev/github.com/sina-ghaderi/rabaead) at pkg.go.dev    
 
 ```go
 // aead open() and seal() methods
