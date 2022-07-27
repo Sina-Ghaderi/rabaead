@@ -6,10 +6,10 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/sina-ghaderi/rabbitio"
+	"snix.ir/rabbitio"
 )
 
-const cmrk = 0x08 // chunk size indicator,
+const cmrk = 0x04 // chunk size indicator,
 // without this reader cannot calculate actual size of plaintext
 
 // additional data func, return value is used as AD in Seal and Open
@@ -38,7 +38,7 @@ type chunkWriter struct {
 // ciphertext, each chunk has its own tag and cmrk value.
 // this reader has a chunk size in-memory buffer, large chunk size can make application to runs
 // out of memory, thus is most suitable for sliced data, like network data transmit and so..
-func NewChunkReader(r io.Reader, chnk int, a cipher.AEAD, nonce []byte, f AdditionalFunc) (*chunkReader, error) {
+func NewChunkReader(r io.Reader, chnk uint32, a cipher.AEAD, nonce []byte, f AdditionalFunc) (*chunkReader, error) {
 
 	if len(nonce) != rabbitio.IVXLen && len(nonce) != 0 {
 		return nil, rabbitio.ErrInvalidIVX
@@ -48,7 +48,7 @@ func NewChunkReader(r io.Reader, chnk int, a cipher.AEAD, nonce []byte, f Additi
 		aead:  a,
 		buff:  []byte{},
 		nonce: make([]byte, len(nonce)),
-		csize: chnk,
+		csize: int(chnk),
 		rader: r,
 		adexe: f,
 	}
@@ -64,7 +64,7 @@ func NewChunkReader(r io.Reader, chnk int, a cipher.AEAD, nonce []byte, f Additi
 // plaintext, each chunk has its own tag and cmrk value.
 // this writer has a chunk size in-memory buffer, large chunk size can make application to
 // runs out of memory, thus is most suitable for sliced data, like network data transmit and so..
-func NewChunkWriter(w io.Writer, chnk int, a cipher.AEAD, nonce []byte, f AdditionalFunc) (*chunkWriter, error) {
+func NewChunkWriter(w io.Writer, chnk uint32, a cipher.AEAD, nonce []byte, f AdditionalFunc) (*chunkWriter, error) {
 
 	if len(nonce) != rabbitio.IVXLen && len(nonce) != 0 {
 		return nil, rabbitio.ErrInvalidIVX
@@ -73,7 +73,7 @@ func NewChunkWriter(w io.Writer, chnk int, a cipher.AEAD, nonce []byte, f Additi
 		aead:   a,
 		buff:   []byte{},
 		nonce:  make([]byte, len(nonce)),
-		csize:  chnk,
+		csize:  int(chnk),
 		writer: w,
 		adexe:  f,
 	}
@@ -96,7 +96,7 @@ func (w *chunkWriter) Close() error {
 
 // Write writes plaintext chunk into the sale() and underlying writer
 // write would not report overhead data (chunk size marker and poly1305 tag) in
-// written return value. for each chunk there is 8+16 byte overhead data.
+// written return value. for each chunk there is 4+16 byte overhead data.
 // AdFunc will be triggered for each chunk of data
 func (w *chunkWriter) Write(b []byte) (n int, err error) {
 	w.buff = b
@@ -119,7 +119,7 @@ func (w *chunkWriter) write() (int, error) {
 	if len(w.buff) > 0 {
 		s := copy(chnk[cmrk:len(chnk)-w.aead.Overhead()], w.buff)
 		w.buff = w.buff[s:]
-		copy(chnk[0:cmrk], uint64Little(uint64(s)))
+		copy(chnk[0:cmrk], uint32Little(uint32(s)))
 
 		w.aead.Seal(chnk[:0], w.nonce, chnk[:cmrk+w.csize], w.adexe())
 		_, err = w.writer.Write(chnk)
@@ -135,7 +135,7 @@ func (w *chunkWriter) write() (int, error) {
 // Read reads and open() ciphertext chunk from underlying reader
 // read would not report overhead data (chunk size marker and poly1305 tag) in its
 // return value. if the read data from underlying reader is corrupted, ErrAuthMsg
-// error will be returned. for each chunk there is 8+16 byte overhead data.
+// error will be returned. for each chunk there is 4+16 byte overhead data.
 // AdFunc will be triggered for each chunk of data
 
 func (r *chunkReader) Read(b []byte) (int, error) {
@@ -181,7 +181,7 @@ func (r *chunkReader) read() (int, error) {
 	var n int
 	size := cmrk + r.csize + r.aead.Overhead()
 	chnk := make([]byte, size)
-	chLE := uint64Little(uint64(r.csize))
+	chLE := uint32Little(uint32(r.csize))
 
 	si, err := io.ReadFull(r.rader, chnk)
 	if err != nil {
@@ -198,7 +198,7 @@ func (r *chunkReader) read() (int, error) {
 			n += r.csize
 			r.buff = append(r.buff, chnk[cmrk:cmrk+r.csize]...)
 		} else {
-			f := binary.LittleEndian.Uint64(chnk[0:cmrk])
+			f := binary.LittleEndian.Uint32(chnk[0:cmrk])
 			n += int(f)
 			r.buff = append(r.buff, chnk[cmrk:cmrk+f]...)
 		}
@@ -207,8 +207,8 @@ func (r *chunkReader) read() (int, error) {
 	return n, err
 }
 
-func uint64Little(n uint64) []byte {
+func uint32Little(n uint32) []byte {
 	b := make([]byte, cmrk)
-	binary.LittleEndian.PutUint64(b, n)
+	binary.LittleEndian.PutUint32(b, n)
 	return b
 }
