@@ -6,6 +6,7 @@ import (
 
 	"github.com/sina-ghaderi/poly1305"
 	"github.com/sina-ghaderi/rabbitio"
+	"github.com/sina-ghaderi/rabbitio/subtle"
 )
 
 const polykeylen = 0x20 // poly1305 key len: 32byte
@@ -44,8 +45,8 @@ func (c *rabbitPoly1305) NonceSize() int { return c.noncesize }
 func (c *rabbitPoly1305) sealRabbit(dst, nonce, plaintext, ad []byte) []byte {
 	ret, out := headtail(dst, len(plaintext)+poly1305.TagSize)
 	ciphertext, tag := out[:len(plaintext)], out[len(plaintext):]
-	if inexactOverlap(out, plaintext) {
-		panic("rabaead: invalid buffer memory overlap") //should never happen
+	if subtle.InexactOverlap(out, ciphertext) {
+		panic("rabaead: invalid buffer memory overlap")
 	}
 
 	var polyKey [polykeylen]byte
@@ -91,8 +92,8 @@ func (c *rabbitPoly1305) openRabbit(dst, nonce, ciphertext, ad []byte) ([]byte, 
 	writeUint64(p, len(ciphertext))
 
 	ret, out := headtail(dst, len(ciphertext))
-	if inexactOverlap(out, ciphertext) {
-		panic("rabaead: invalid buffer memory overlap") //should never happen
+	if subtle.InexactOverlap(out, ciphertext) {
+		panic("rabaead: invalid buffer memory overlap")
 	}
 
 	// check data integrity
