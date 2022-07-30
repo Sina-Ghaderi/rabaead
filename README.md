@@ -13,9 +13,9 @@ with associated io chunk and io stream interfaces.
 
 
 ### io interfaces:  
-- **chunkReader**: read and open() data in chunks, there is 4byte + 16byte overhead per chunk. read data can be used safely. this reader has a chunk size in-memory buffer, large chunk size can make application to runs out of memory, thus this is most suitable for sliced data, like network data transmit and so..
+- **chunkReader**: read and open() data in chunks, there is 2byte + 16byte overhead per chunk. read data can be used safely. this reader has a chunk size in-memory buffer, large chunk size can make application to runs out of memory, thus this is most suitable for sliced data, like network data transmit and so..
 
-- **chunkReader**: seal() and write data in chunks, there is 4byte + 16byte overhead per chunk. this writer has a chunk size in-memory buffer, large chunk size can make application to runs out of memory, thus this is most suitable for sliced data, like network data transmit and so..
+- **chunkReader**: seal() and write data in chunks, there is 2byte + 16byte overhead per chunk. this writer has a chunk size in-memory buffer, large chunk size can make application to runs out of memory, thus this is most suitable for sliced data, like network data transmit and so..
 <p align="center">
    <img src="https://github.com/Sina-Ghaderi/rabaead/blob/master/chunkio.png" alt="chunkio"/>
 </p>
