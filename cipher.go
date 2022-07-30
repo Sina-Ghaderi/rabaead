@@ -11,7 +11,6 @@ import (
 const polykeylen = 0x20 // poly1305 key len: 32byte
 
 var ErrAuthMsg = errors.New("rabaead: message authentication failed")
-var erroverlap = errors.New("rabaead: invalid buffer memory overlap")
 
 type rabbitPoly1305 struct {
 	key       []byte // rabbit cipher key
@@ -46,7 +45,7 @@ func (c *rabbitPoly1305) sealRabbit(dst, nonce, plaintext, ad []byte) []byte {
 	ret, out := headtail(dst, len(plaintext)+poly1305.TagSize)
 	ciphertext, tag := out[:len(plaintext)], out[len(plaintext):]
 	if inexactOverlap(out, plaintext) {
-		panic(erroverlap) //should never happen
+		panic("rabaead: invalid buffer memory overlap") //should never happen
 	}
 
 	var polyKey [polykeylen]byte
@@ -93,7 +92,7 @@ func (c *rabbitPoly1305) openRabbit(dst, nonce, ciphertext, ad []byte) ([]byte, 
 
 	ret, out := headtail(dst, len(ciphertext))
 	if inexactOverlap(out, ciphertext) {
-		panic(erroverlap) //should never happen
+		panic("rabaead: invalid buffer memory overlap") //should never happen
 	}
 
 	// check data integrity
@@ -113,9 +112,12 @@ func (c *rabbitPoly1305) openRabbit(dst, nonce, ciphertext, ad []byte) ([]byte, 
 // panic occurs if nonce len is not equal to IVXLen (8byte) or zero
 // if data is not verified, ErrAuthMsg will be returned
 func (c *rabbitPoly1305) Open(dst, nonce, ciphertext, ad []byte) ([]byte, error) {
-
 	if len(ciphertext) < poly1305.TagSize {
 		return nil, ErrAuthMsg
+	}
+
+	if uint64(len(ciphertext)) > (1<<38)-48 {
+		panic("rabaead: ciphertext too large")
 	}
 
 	return c.openRabbit(dst, nonce, ciphertext, ad)
@@ -124,5 +126,9 @@ func (c *rabbitPoly1305) Open(dst, nonce, ciphertext, ad []byte) ([]byte, error)
 // Seal seals a plaintext into the rabbit aead ciphertext.
 // panic occurs if nonce len is not equal to IVXLen (8byte) or zero
 func (c *rabbitPoly1305) Seal(dst, nonce, plaintext, ad []byte) []byte {
+	if uint64(len(plaintext)) > (1<<38)-64 {
+		panic("rabaead: plaintext too large")
+	}
+
 	return c.sealRabbit(dst, nonce, plaintext, ad)
 }
