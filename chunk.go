@@ -7,7 +7,7 @@ import (
 	"errors"
 	"io"
 
-	"snix.ir/rabbitio"
+	"github.com/sina-ghaderi/rabbitio"
 )
 
 const cmrs = 0x02 // chunk size indicator,
